@@ -10,17 +10,17 @@ from .routers import canny
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Gestiona el ciclo de vida de la aplicación:
-    - startup: Se ejecuta al iniciar
-    - shutdown: Se ejecuta al cerrar
+    Manages the application lifecycle:
+    - startup: Executes on startup
+    - shutdown: Executes on shutdown
     """
     
-    yield  # La aplicación corre aquí
+    yield  # Application runs here
     
     # Shutdown
-    print("Cerrando aplicación...")
+    print("Closing application...")
     
-    print("Aplicación cerrada correctamente")
+    print("Application closed successfully")
 
 
 app = FastAPI(
@@ -28,7 +28,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS para permitir pruebas desde navegador si fuera necesario
+# CORS to allow testing from browser if needed
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,7 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Montar archivos estáticos
+# Mount static files
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
