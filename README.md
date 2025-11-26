@@ -172,15 +172,3 @@ Configuration is handled in `app/core/cuda_config.py` and initialized at applica
 ## 📝 License
 
 MIT License - see LICENSE file for details
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📧 Contact
-
-For questions or support, please open an issue on GitHub.
-
----
-
-**Note**: GPU filters (Gaussian Blur, Negative, Emboss) are currently in development. The UI is ready, and backend implementation will be added soon.
