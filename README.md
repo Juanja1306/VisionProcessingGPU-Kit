@@ -118,7 +118,7 @@ VisionProcessingGPU-Kit/
 ## 📡 API Endpoints
 
 ### Canny Edge Detection
-```http
+```text
 POST /api/canny
 Content-Type: multipart/form-data
 
