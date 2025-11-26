@@ -6,6 +6,11 @@ from contextlib import asynccontextmanager
 from fastapi.responses import FileResponse
 
 
+from .core.cuda_config import init_cuda
+
+# Initialize CUDA environment (paths, etc.) before loading other modules
+init_cuda()
+
 from .routers import canny
 
 
