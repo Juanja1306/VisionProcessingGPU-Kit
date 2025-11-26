@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from contextlib import asynccontextmanager
+from fastapi.responses import FileResponse
+
 
 from .routers import canny
 
@@ -43,7 +45,11 @@ static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
-app.include_router(canny.router, prefix="/canny", tags=["Canny"])
+app.include_router(canny.router, tags=["Canny"])
+
+@app.get("/", tags=["UI"])
+async def read_index():
+    return FileResponse(static_dir / "index.html")
 
 @app.get("/health", status_code=200, tags=["Health"])
 def health_check():

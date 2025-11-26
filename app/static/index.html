@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU Vision | Canny & More</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #8b5cf6;
+            /* Violet */
+            --accent-secondary: #06b6d4;
+            /* Cyan */
+            --accent-hover: #7c3aed;
+            --border-color: #334155;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 260px;
+            background-color: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 40px;
+            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0) 100%);
+            border-left: 3px solid var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-y: auto;
+        }
+
+        /* Background Gradient Blob */
+        .bg-blob {
+            position: absolute;
+            top: -50%;
+            left: -20%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .content-wrapper {
+            padding: 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            z-index: 1;
+            display: flex;
+            gap: 30px;
+            height: 100%;
+        }
+
+        /* Left Panel: Controls */
+        .panel-left {
+            width: 350px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin: 0 0 20px 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover,
+        .upload-area.drag-over {
+            border-color: var(--accent-primary);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 24px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Controls */
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        /* Right Panel: Preview */
+        .panel-right {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 0;
+            /* Important for scrolling */
+        }
+
+        .preview-container {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            min-height: 0;
+        }
+
+        .image-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-header {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: white;
+            z-index: 2;
+        }
+
+        .image-wrapper {
+            flex: 1;
+            background: #111;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .image-wrapper img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .empty-state {
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Utilities */
+        .hidden {
+            display: none !important;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            backdrop-filter: blur(4px);
+            border-radius: 12px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(139, 92, 246, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent-primary);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside>
+        <div class="brand">GPU Vision Kit</div>
+        <div class="nav-item active" data-filter="canny">
+            <span> •</span> Canny Edge
+        </div>
+        <div class="nav-item" data-filter="gaussian">
+            <span>•</span> Gaussian Blur
+        </div>
+        <div class="nav-item" data-filter="sobel">
+            <span>•</span> Negative
+        </div>
+        <div class="nav-item" data-filter="laplacian">
+            <span>•</span> Emboss
+        </div>
+    </aside>
+
+    <main>
+        <div class="bg-blob"></div>
+
+        <div class="content-wrapper">
+            <!-- Left Panel: Controls -->
+            <div class="panel-left">
+
+                <!-- Upload Card -->
+                <div class="glass-card">
+                    <h2>Input Image</h2>
+                    <div id="drop-area" class="upload-area">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Drag & drop or click to upload</div>
+                        <input type="file" id="file-input" hidden accept="image/*">
+                    </div>
+                </div>
+
+                <!-- Parameters Card -->
+                <div class="glass-card">
+                    <h2 id="filter-title">Filter Settings</h2>
+                    <div id="controls-container">
+                        <!-- Dynamic controls will be injected here -->
+                    </div>
+
+                    <button id="process-btn" class="btn btn-primary">
+                        <span>✨</span> Process Image
+                    </button>
+                    <a id="download-link" class="hidden" style="text-decoration: none;">
+                        <button class="btn btn-secondary">
+                            <span>⬇️</span> Download Result
+                        </button>
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="panel-right">
+                <div class="preview-container">
+
+                    <!-- Original Image -->
+                    <div class="image-card glass-card">
+                        <div class="image-header">Original</div>
+                        <div class="image-wrapper">
+                            <img id="original-image" class="hidden" alt="Original">
+                            <div id="empty-original" class="empty-state">
+                                <span>No image loaded</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processed Image -->
+                    <div class="image-card glass-card">
+                        <div class="image-header">Processed</div>
+                        <div class="image-wrapper">
+                            <img id="processed-image" class="hidden" alt="Processed">
+                            <div id="empty-processed" class="empty-state">
+                                <span>Process an image to see result</span>
+                            </div>
+                            <div id="loading" class="loading-overlay hidden">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Configuration for all filters
+        const filterConfig = {
+            canny: {
+                name: "Canny Edge Detection",
+                controls: [
+                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 15, step: 2, value: 5 },
+                    { id: 'sigma', label: 'Sigma', type: 'range', min: 0.1, max: 5.0, step: 0.1, value: 1.4 },
+                    { id: 'low', label: 'Low Threshold', type: 'range', min: 0, max: 255, step: 1, value: 0, suffix: '(Auto if 0)' },
+                    { id: 'high', label: 'High Threshold', type: 'range', min: 0, max: 255, step: 1, value: 0, suffix: '(Auto if 0)' }
+                ]
+            },
+            gaussian: {
+                name: "Gaussian Blur",
+                controls: [
+                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 15, step: 2, value: 5 },
+                    { id: 'sigma', label: 'Sigma', type: 'range', min: 0.1, max: 10.0, step: 0.1, value: 2.0 }
+                ]
+            },
+            sobel: {
+                name: "Sobel Operator",
+                controls: [
+                    { id: 'ksize', label: 'Kernel Size', type: 'range', min: 1, max: 7, step: 2, value: 3 },
+                    { id: 'scale', label: 'Scale', type: 'range', min: 1, max: 5, step: 1, value: 1 }
+                ]
+            },
+            laplacian: {
+                name: "Laplacian",
+                controls: [
+                    { id: 'ksize', label: 'Kernel Size', type: 'range', min: 1, max: 7, step: 2, value: 3 }
+                ]
+            }
+        };
+
+        // State
+        let currentFilter = 'canny';
+        let currentFile = null;
+        const controlValues = {}; // Store values to persist when switching
+
+        // DOM Elements
+        const controlsContainer = document.getElementById('controls-container');
+        const filterTitle = document.getElementById('filter-title');
+        const navItems = document.querySelectorAll('.nav-item');
+        const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('file-input');
+        const originalImg = document.getElementById('original-image');
+        const processedImg = document.getElementById('processed-image');
+        const emptyOriginal = document.getElementById('empty-original');
+        const emptyProcessed = document.getElementById('empty-processed');
+        const loading = document.getElementById('loading');
+        const processBtn = document.getElementById('process-btn');
+        const downloadLink = document.getElementById('download-link');
+
+        // Initialize
+        function init() {
+            renderControls(currentFilter);
+            setupEventListeners();
+        }
+
+        function renderControls(filterKey) {
+            const config = filterConfig[filterKey];
+            filterTitle.textContent = config.name;
+            controlsContainer.innerHTML = '';
+
+            config.controls.forEach(ctrl => {
+                // Use stored value if exists, else default
+                const val = controlValues[ctrl.id] !== undefined ? controlValues[ctrl.id] : ctrl.value;
+
+                const group = document.createElement('div');
+                group.className = 'control-group';
+                group.innerHTML = `
+                    <div class="control-header">
+                        <label>${ctrl.label} ${ctrl.suffix || ''}</label>
+                        <span id="val-${ctrl.id}">${val}</span>
+                    </div>
+                    <input type="${ctrl.type}" id="${ctrl.id}" 
+                           min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${val}">
+                `;
+                controlsContainer.appendChild(group);
+
+                // Event listener for value update
+                const input = group.querySelector('input');
+                input.addEventListener('input', (e) => {
+                    document.getElementById(`val-${ctrl.id}`).textContent = e.target.value;
+                    controlValues[ctrl.id] = e.target.value;
+                });
+            });
+        }
+
+        function setupEventListeners() {
+            // Navigation
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    // Update UI
+                    navItems.forEach(n => n.classList.remove('active'));
+                    item.classList.add('active');
+
+                    // Update State
+                    currentFilter = item.dataset.filter;
+                    renderControls(currentFilter);
+                });
+            });
+
+            // File Upload
+            dropArea.addEventListener('click', () => fileInput.click());
+
+            dropArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropArea.classList.add('drag-over');
+            });
+
+            dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+
+            dropArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('drag-over');
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) handleFile(e.target.files[0]);
+            });
+
+            // Process Button
+            processBtn.addEventListener('click', processImage);
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file.');
+                return;
+            }
+            currentFile = file;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                originalImg.src = e.target.result;
+                originalImg.classList.remove('hidden');
+                emptyOriginal.classList.add('hidden');
+
+                // Reset processed
+                processedImg.classList.add('hidden');
+                emptyProcessed.classList.remove('hidden');
+                downloadLink.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function processImage() {
+            if (!currentFile) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            if (currentFilter !== 'canny') {
+                alert(`The ${filterConfig[currentFilter].name} backend is not implemented yet.\n\nOnly Canny Edge Detection is fully functional.`);
+                return;
+            }
+
+            loading.classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+
+            // Get current values from inputs
+            const inputs = controlsContainer.querySelectorAll('input');
+            inputs.forEach(input => {
+                // Map input IDs to API parameters
+                let paramName = input.id;
+                if (paramName === 'kernel') paramName = 'kernel_size';
+                if (paramName === 'low') paramName = 'low_threshold';
+                if (paramName === 'high') paramName = 'high_threshold';
+
+                // Only append if value > 0 for thresholds (to trigger auto logic)
+                if ((paramName.includes('threshold') && input.value > 0) || !paramName.includes('threshold')) {
+                    formData.append(paramName, input.value);
+                }
+            });
+
+            try {
+                const response = await fetch('/api/canny', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Processing failed');
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+
+                processedImg.src = url;
+                processedImg.classList.remove('hidden');
+                emptyProcessed.classList.add('hidden');
+
+                downloadLink.href = url;
+                downloadLink.download = `canny_result_${Date.now()}.png`;
+                downloadLink.classList.remove('hidden');
+
+            } catch (error) {
+                alert('Error: ' + error.message);
+                console.error(error);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>
