@@ -1,8 +1,3 @@
-import { applyCanny } from './applyCanny.js'
-import { applyEmboss } from './applyEmboss.js'
-
-//TODO: estandarizar los nombres
-
 export const filtersNames = {
     CANNY: 'canny',
     GAUSSIAN: 'gaussian',
@@ -46,7 +41,8 @@ const filterConfig = {
     [filtersNames.EMBOSS]: {
         name: "Emboss",
         controls: [
-            { id: 'ksize', label: 'Kernel Size', type: 'range', min: 1, max: 7, step: 2, value: 3 }
+            { id: 'ksize', label: 'Kernel Size', type: 'range', min: 1, max: 7, step: 2, value: 3 },
+            { id: 'biasValue', label: 'Bias Value', type: 'range', min: 1, max: 255, step: 1, value: 128 }
         ]
     }
 };
@@ -192,6 +188,115 @@ async function processImage() {
     }
 
 }
+
+//* Aplicar Canny
+async function applyCanny(FormData,inputs) {    
+    inputs.forEach(input => {
+        // Map input IDs to API parameters
+        let paramName = input.id;
+        if (paramName === 'kernel') paramName = 'kernel_size';
+        if (paramName === 'low') paramName = 'low_threshold';
+        if (paramName === 'high') paramName = 'high_threshold';
+
+        // Only append if value > 0 for thresholds (to trigger auto logic)
+        if ((paramName.includes('threshold') && input.value > 0) || !paramName.includes('threshold')) {
+            formData.append(paramName, input.value);
+        }
+    });
+
+    try {
+        const response = await fetch('/api/canny', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.detail || 'Processing failed');
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        processedImg.src = url;
+        processedImg.classList.remove('hidden');
+        emptyProcessed.classList.add('hidden');
+
+        downloadLink.href = url;
+        downloadLink.download = `canny_result_${Date.now()}.png`;
+        downloadLink.classList.remove('hidden');
+
+    } catch (error) {
+        alert('Error: ' + error.message);
+        console.error(error);
+    } finally {
+        loading.classList.add('hidden');
+    }
+}
+
+//* Aplicar Emboss
+const ENDPOINT = '/api/emboss';
+
+async function applyEmboss(formData, inputs) {
+    console.log('Aplicando filtro Emboss...');
+
+    // 1. Mapear y añadir parámetros específicos al FormData
+    inputs.forEach(input => {
+        let paramName = input.id;
+
+        // 🚨 Mapeo específico para Emboss (Asegúrate que el backend lo espera así)
+        if (paramName === 'ksize') {
+            paramName = 'kernelSize'; // Mapea ksize a kernelSize
+        }
+        // 'biasValue' ya coincide con el nombre del parámetro en FastAPI
+
+        // Agregar el valor al FormData
+        formData.append(paramName, input.value);
+    });
+
+    try {
+        // 2. Ejecutar la petición HTTP POST
+        const response = await fetch(ENDPOINT, {
+            method: 'POST',
+            body: formData // Contiene 'file', 'kernelSize', y 'biasValue'
+        });
+
+        // 3. Manejar la respuesta y actualizar la UI
+        // Esta función procesa el blob de la imagen y la muestra.
+        //await handleAPIResponse(response, 'emboss');
+        if (!response.ok) {
+            // Intentar leer el error JSON de FastAPI
+            const contentType = response.headers.get("content-type");
+            let errorDetail = 'Processing failed';
+            if (contentType && contentType.includes("application/json")) {
+                const err = await response.json();
+                errorDetail = err.detail || 'Processing failed';
+            } else {
+                errorDetail = `Server error: ${response.status} ${response.statusText}`;
+            }
+            throw new Error(errorDetail);
+        }
+
+        // Respuesta es exitosa (debe ser 'image/png')
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+
+        // 1. Mostrar la imagen
+        processedImg.src = url;
+        processedImg.classList.remove('hidden');
+        emptyProcessed.classList.add('hidden');
+
+        // 2. Configurar la descarga
+        downloadLink.href = url;
+        downloadLink.download = `emboss_result_${Date.now()}.png`;
+        downloadLink.classList.remove('hidden');
+
+    } catch (error) {
+        // Relanzar el error para que sea capturado por el try/catch de processImage()
+        throw new Error(error.message || 'Fallo en la petición Emboss.');
+    }
+}
+
 
 // Start
 init();
