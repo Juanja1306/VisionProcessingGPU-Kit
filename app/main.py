@@ -16,6 +16,7 @@ from .routers import gaussian
 from .routers import negative
 from .routers import emboss
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -56,6 +57,7 @@ app.include_router(canny.router, tags=["Canny"])
 app.include_router(gaussian.router, tags=["Gaussian"])
 app.include_router(negative.router, tags=["Negative"])
 app.include_router(emboss.router, tags=["Emboss"])
+
 
 @app.get("/", tags=["UI"])
 async def read_index():
