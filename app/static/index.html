@@ -180,6 +180,7 @@
             border-radius: 3px;
             outline: none;
             -webkit-appearance: none;
+            appearance: none;
         }
 
         input[type="range"]::-webkit-slider-thumb {
@@ -443,7 +444,7 @@
             },
             negative: {
                 name: "Negative Filter",
-                controls: []   // sin parámetros por ahora
+                controls: []
             },
             emboss: {
                 name: "Emboss Filter",
@@ -679,27 +680,18 @@
             const formData = new FormData();
             formData.append('file', currentFile);
 
-            const inputs = controlsContainer.querySelectorAll('input[type="range"]');
-            inputs.forEach(input => {
-                let paramName = input.id;
-                if (paramName === 'kernel') paramName = 'kernel_size';
-                if (paramName === 'low') paramName = 'low_threshold';
-                if (paramName === 'high') paramName = 'high_threshold';
-
-                if ((paramName.includes('threshold') && input.value > 0) || !paramName.includes('threshold')) {
-                    formData.append(paramName, input.value);
-                }
-            });
+            // Verificar si el modo automático está activado para cada filtro
+            let useAuto = false;
 
             if (currentFilter === 'gaussian') {
                 const autoMaskEl = document.getElementById('gauss-auto-mask');
-                const useAuto = autoMaskEl && autoMaskEl.checked;
+                useAuto = autoMaskEl && autoMaskEl.checked;
                 formData.append('use_auto', useAuto ? 'true' : 'false');
             }
 
             if (currentFilter === 'canny') {
                 const autoModeEl = document.getElementById('canny-auto-mode');
-                const useAuto = autoModeEl && autoModeEl.checked;
+                useAuto = autoModeEl && autoModeEl.checked;
                 formData.append('use_auto', useAuto ? 'true' : 'false');
             }
 
@@ -707,6 +699,21 @@
                 const autoModeEl = document.getElementById('emboss-auto-mode');
                 const useAuto = autoModeEl && autoModeEl.checked;
                 formData.append('use_auto', useAuto ? 'true' : 'false');
+            }
+
+            // Solo agregar parámetros manuales si el modo automático NO está activado
+            if (!useAuto) {
+                const inputs = controlsContainer.querySelectorAll('input[type="range"]');
+                inputs.forEach(input => {
+                    let paramName = input.id;
+                    if (paramName === 'kernel') paramName = 'kernel_size';
+                    if (paramName === 'low') paramName = 'low_threshold';
+                    if (paramName === 'high') paramName = 'high_threshold';
+
+                    if ((paramName.includes('threshold') && input.value > 0) || !paramName.includes('threshold')) {
+                        formData.append(paramName, input.value);
+                    }
+                });
             }
 
             try {
