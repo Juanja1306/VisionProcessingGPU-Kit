@@ -13,16 +13,27 @@ A GPU-accelerated image processing microservice built with **FastAPI**, **PyCUDA
 ## 🎨 Available Filters
 
 ### ✅ Implemented
+
 - **Canny Edge Detection**: Full GPU implementation with automatic threshold detection
   - Gaussian blur smoothing
   - Sobel gradient calculation
   - Non-maximum suppression
   - Hysteresis edge tracking
 
+- **Gaussian Blur** (GPU)
+  - Works directly on **color images (BGR)**.
+  - Configurable **kernel size** (odd values, up to large kernels).
+  - Configurable **sigma** for blur intensity.
+  - Optional **auto mode**: chooses kernel size and sigma based on image size.
+
+- **Negative Filter** (GPU)
+  - Full-color inversion on the GPU.
+  - No parameters: upload an image and invert all RGB channels.
+
 ### 🔜 Coming Soon
+
 The following filters have UI placeholders and will be implemented:
-- **Gaussian Blur**: Configurable kernel size and sigma
-- **Negative**: Image color inversion
+
 - **Emboss**: 3D embossing effect
 
 ## 🏗️ Architecture
@@ -31,18 +42,24 @@ The following filters have UI placeholders and will be implemented:
 VisionProcessingGPU-Kit/
 ├── app/
 │   ├── core/
-│   │   └── cuda_config.py      # Cross-platform CUDA environment setup
+│   │   └── cuda_config.py        # Cross-platform CUDA environment setup
 │   ├── filters/
-│   │   └── canny.py             # CUDA kernels and Canny implementation
+│   │   ├── canny.py              # CUDA kernels and Canny implementation
+│   │   ├── gaussian.py           # Gaussian blur CUDA implementation (color)
+│   │   └── negative.py           # Negative filter CUDA implementation (color)
 │   ├── routers/
-│   │   └── canny.py             # FastAPI endpoint for Canny filter
+│   │   ├── canny.py              # FastAPI endpoint for Canny filter
+│   │   ├── gaussian.py           # FastAPI endpoint for Gaussian blur
+│   │   └── negative.py           # FastAPI endpoint for Negative filter
 │   ├── schemas/
-│   │   └── canny.py             # Pydantic models for request validation
+│   │   ├── canny.py              # Pydantic models for Canny parameters
+│   │   ├── gaussian.py           # Pydantic models for Gaussian parameters
+│   │   └── negative.py           # Pydantic model (placeholder) for Negative filter
 │   ├── static/
-│   │   └── index.html           # Premium web UI
-│   └── main.py                  # FastAPI application entry point
-├── dockerfile                   # Docker configuration with CUDA 12.6
-├── requirements.txt             # Python dependencies
+│   │   └── index.html            # Premium web UI (Canny / Gaussian / Negative)
+│   └── main.py                   # FastAPI application entry point
+├── dockerfile                    # Docker configuration with CUDA base image
+├── requirements.txt              # Python dependencies
 └── README.md
 ```
 
@@ -57,12 +74,14 @@ VisionProcessingGPU-Kit/
 ## 📋 Requirements
 
 ### Local Development
+
 - Python 3.12+
 - NVIDIA GPU with CUDA support
 - CUDA Toolkit 12.6
 - Visual Studio Build Tools (Windows only)
 
 ### Docker Deployment
+
 - Docker with NVIDIA Container Toolkit
 - NVIDIA GPU with compatible drivers
 
@@ -71,12 +90,14 @@ VisionProcessingGPU-Kit/
 ### Local Development
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/VisionProcessingGPU-Kit.git
    cd VisionProcessingGPU-Kit
    ```
 
 2. **Create virtual environment**
+
    ```bash
    python -m venv .venv
    .venv\Scripts\activate  # Windows
@@ -84,16 +105,19 @@ VisionProcessingGPU-Kit/
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Run the application**
+
    ```bash
    uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
 
 5. **Access the web UI**
+
    ```
    http://localhost:8000
    ```
@@ -101,16 +125,19 @@ VisionProcessingGPU-Kit/
 ### Docker Deployment
 
 1. **Build the Docker image**
+
    ```bash
    docker build -t gpu-vision-kit .
    ```
 
 2. **Run with GPU support**
+
    ```bash
    docker run --gpus all -p 8000:8000 gpu-vision-kit
    ```
 
 3. **Access the application**
+
    ```
    http://localhost:8000
    ```
@@ -118,6 +145,7 @@ VisionProcessingGPU-Kit/
 ## 📡 API Endpoints
 
 ### Canny Edge Detection
+
 ```text
 POST /api/canny
 Content-Type: multipart/form-data
@@ -132,7 +160,35 @@ Parameters:
 Response: PNG image with detected edges
 ```
 
+### Gaussian Blur
+
+```text
+POST /api/gaussian
+Content-Type: multipart/form-data
+
+Parameters:
+- file: Image file (required)
+- kernel_size: Gaussian kernel size (default: 15)
+- sigma: Gaussian sigma (default: 5)
+- auto: Use auto mode (default: false)
+
+Response: PNG image with applied blur
+```
+
+### Negative Filter
+
+```text
+POST /api/negative
+Content-Type: multipart/form-data
+
+Parameters:
+- file: Image file (required)
+
+Response: PNG image with inverted colors
+```
+
 ### Health Check
+
 ```http
 GET /health
 
@@ -151,9 +207,32 @@ The Canny edge detection filter uses custom CUDA kernels for:
 
 All operations are performed on the GPU, minimizing CPU-GPU data transfers.
 
+### Gaussian Blur
+
+- Generates a 2D Gaussian kernel on the CPU (normalized).
+
+- Transfers kernel + image to GPU.
+
+- Applies convolution in parallel across the image.
+
+- Operates on all color channels to preserve the color structure of the image.
+
+Supports both manual parameters and an “auto” mode that adapts to the image resolution.
+
+### Negative Filter
+
+Simple, highly parallel kernel:
+
+- One thread per pixel (per channel group).
+
+- Performs 255 - value on each color channel.
+
+Extremely fast due to low arithmetic intensity and fully parallel execution.
+
 ## 🌐 Web Interface
 
 The web UI features:
+
 - **Drag & drop** image upload
 - **Real-time parameter** adjustment with live value display
 - **Side-by-side comparison** of original and processed images
@@ -163,7 +242,9 @@ The web UI features:
 ## 🔧 Configuration
 
 ### CUDA Environment
+
 The application automatically configures CUDA paths based on the operating system:
+
 - **Windows**: Sets Visual Studio compiler paths
 - **Linux**: Configures CUDA bin paths
 
