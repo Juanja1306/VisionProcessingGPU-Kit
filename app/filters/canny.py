@@ -27,23 +27,45 @@ def exp_manual(x):
 
 def generar_kernel_gaussiano(tamanio, sigma):
     """Genera un kernel gaussiano manualmente."""
-    kernel = np.zeros((tamanio, tamanio), dtype=np.float32)
+    # Usar float64 para cálculos intermedios para evitar overflow
+    kernel = np.zeros((tamanio, tamanio), dtype=np.float64)
     centro = tamanio // 2
+    
+    # Ajustar sigma si es muy pequeño para el tamaño del kernel
+    # Para kernels grandes, sigma debería ser proporcional al tamaño
+    sigma_min = tamanio / 6.0  # Regla empírica
+    if sigma < sigma_min:
+        sigma = sigma_min
     
     suma_total = 0.0
     for y in range(tamanio):
         for x in range(tamanio):
             dx = x - centro
             dy = y - centro
-            valor = exp_manual(-(dx*dx + dy*dy) / (2.0 * sigma * sigma))
+            # Calcular el exponente
+            exponente = -(dx*dx + dy*dy) / (2.0 * sigma * sigma)
+            # Limitar el exponente para evitar underflow
+            if exponente < -20.0:  # e^-20 ≈ 2e-9, suficientemente pequeño
+                valor = 0.0
+            else:
+                valor = exp_manual(exponente)
             kernel[y, x] = valor
             suma_total += valor
     
+    # Verificar que la suma no sea cero o muy pequeña
+    if suma_total < 1e-10:
+        # Kernel degenerado, usar impulso unitario en el centro
+        kernel = np.zeros((tamanio, tamanio), dtype=np.float64)
+        kernel[centro, centro] = 1.0
+        suma_total = 1.0
+    
+    # Normalizar
     for y in range(tamanio):
         for x in range(tamanio):
             kernel[y, x] /= suma_total
     
-    return kernel
+    # Convertir a float32 al final
+    return kernel.astype(np.float32)
 
 
 def convertir_a_grises(imagen):
