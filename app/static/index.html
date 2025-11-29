@@ -447,8 +447,8 @@
             gaussian: {
                 name: "Gaussian Blur",
                 controls: [
-                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 15, step: 2, value: 5 },
-                    { id: 'sigma', label: 'Sigma', type: 'range', min: 0.1, max: 10.0, step: 0.1, value: 2.0 }
+                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 100, step: 2, value: 15 },
+                    { id: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 25, step: 1, value: 5 }
                 ]
             },
             sobel: {
@@ -464,6 +464,14 @@
                     { id: 'ksize', label: 'Kernel Size', type: 'range', min: 1, max: 7, step: 2, value: 3 }
                 ]
             }
+        };
+
+        // Backend endpoints for each filter
+        const endpoints = {
+            canny: '/api/canny',
+            gaussian: '/api/gaussian',
+            // sobel: '/api/negative',   // futuro
+            // laplacian: '/api/emboss', // futuro
         };
 
         // State
@@ -496,8 +504,8 @@
             filterTitle.textContent = config.name;
             controlsContainer.innerHTML = '';
 
+            // Controles genéricos (sliders)
             config.controls.forEach(ctrl => {
-                // Use stored value if exists, else default
                 const val = controlValues[ctrl.id] !== undefined ? controlValues[ctrl.id] : ctrl.value;
 
                 const group = document.createElement('div');
@@ -512,24 +520,51 @@
                 `;
                 controlsContainer.appendChild(group);
 
-                // Event listener for value update
                 const input = group.querySelector('input');
                 input.addEventListener('input', (e) => {
                     document.getElementById(`val-${ctrl.id}`).textContent = e.target.value;
                     controlValues[ctrl.id] = e.target.value;
                 });
             });
+
+            // Extra: opción auto para Gaussian
+            if (filterKey === 'gaussian') {
+                const extra = document.createElement('div');
+                extra.className = 'control-group';
+                extra.innerHTML = `
+                    <div class="control-header">
+                        <label>Gaussian Mode</label>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--text-secondary);">
+                        <input type="checkbox" id="gauss-auto-mask" />
+                        Use recommended Gaussian mask (auto)
+                    </label>
+                    <span style="font-size:0.75rem; color:var(--text-secondary);">
+                        If enabled, kernel size and sigma are chosen automatically based on the image size.
+                    </span>
+                `;
+                controlsContainer.appendChild(extra);
+
+                // Desactivar sliders cuando está en auto (solo visual)
+                const autoCheckbox = extra.querySelector('#gauss-auto-mask');
+                const sliderInputs = controlsContainer.querySelectorAll('input[type="range"]');
+                autoCheckbox.addEventListener('change', (e) => {
+                    const disabled = e.target.checked;
+                    sliderInputs.forEach(inp => {
+                        inp.disabled = disabled;
+                        inp.style.opacity = disabled ? 0.5 : 1;
+                    });
+                });
+            }
         }
 
         function setupEventListeners() {
             // Navigation
             navItems.forEach(item => {
                 item.addEventListener('click', () => {
-                    // Update UI
                     navItems.forEach(n => n.classList.remove('active'));
                     item.classList.add('active');
 
-                    // Update State
                     currentFilter = item.dataset.filter;
                     renderControls(currentFilter);
                 });
@@ -555,7 +590,6 @@
                 if (e.target.files.length) handleFile(e.target.files[0]);
             });
 
-            // Process Button
             processBtn.addEventListener('click', processImage);
         }
 
@@ -572,7 +606,6 @@
                 originalImg.classList.remove('hidden');
                 emptyOriginal.classList.add('hidden');
 
-                // Reset processed
                 processedImg.classList.add('hidden');
                 emptyProcessed.classList.remove('hidden');
                 downloadLink.classList.add('hidden');
@@ -586,8 +619,9 @@
                 return;
             }
 
-            if (currentFilter !== 'canny') {
-                alert(`The ${filterConfig[currentFilter].name} backend is not implemented yet.\n\nOnly Canny Edge Detection is fully functional.`);
+            const endpoint = endpoints[currentFilter];
+            if (!endpoint) {
+                alert(`The ${filterConfig[currentFilter].name} backend is not implemented yet.\n\nCurrently, Canny Edge Detection and Gaussian Blur are implemented.`);
                 return;
             }
 
@@ -596,23 +630,28 @@
             const formData = new FormData();
             formData.append('file', currentFile);
 
-            // Get current values from inputs
-            const inputs = controlsContainer.querySelectorAll('input');
+            // Sliders
+            const inputs = controlsContainer.querySelectorAll('input[type="range"]');
             inputs.forEach(input => {
-                // Map input IDs to API parameters
                 let paramName = input.id;
                 if (paramName === 'kernel') paramName = 'kernel_size';
                 if (paramName === 'low') paramName = 'low_threshold';
                 if (paramName === 'high') paramName = 'high_threshold';
 
-                // Only append if value > 0 for thresholds (to trigger auto logic)
                 if ((paramName.includes('threshold') && input.value > 0) || !paramName.includes('threshold')) {
                     formData.append(paramName, input.value);
                 }
             });
 
+            // Gaussian: flag de auto
+            if (currentFilter === 'gaussian') {
+                const autoMaskEl = document.getElementById('gauss-auto-mask');
+                const useAuto = autoMaskEl && autoMaskEl.checked;
+                formData.append('use_auto', useAuto ? 'true' : 'false');
+            }
+
             try {
-                const response = await fetch('/api/canny', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     body: formData
                 });
@@ -630,7 +669,7 @@
                 emptyProcessed.classList.add('hidden');
 
                 downloadLink.href = url;
-                downloadLink.download = `canny_result_${Date.now()}.png`;
+                downloadLink.download = `${currentFilter}_result_${Date.now()}.png`;
                 downloadLink.classList.remove('hidden');
 
             } catch (error) {
@@ -641,10 +680,9 @@
             }
         }
 
-        // Start
         init();
-
     </script>
+
 </body>
 
 </html>
