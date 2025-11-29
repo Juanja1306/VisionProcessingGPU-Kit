@@ -4,11 +4,8 @@ from fastapi.responses import Response
 from PIL import Image
 from io import BytesIO
 
-from ..filters.emboss.Sequential import Sequential, SequentialProps
-from ..filters.emboss.Cuda import CudaProps, CudaEmboss
-from ..filters.emboss.utils.processImage import ProcessImage
-from ..filters.emboss.emboss import Emboss, EmbossProps
 
+from ..filters.emboss import CudaProps, CudaEmboss
 
 
 router = APIRouter()
@@ -20,25 +17,17 @@ async def applyEmboss(
     biasValue: int = Form(128)
 ):
     
-    try:       
-        processImage = ProcessImage()
-        sequentialService = Sequential(SequentialProps(
-            processImage=processImage,
+    try:     
+               
+        cudaService = CudaEmboss(CudaProps(            
             imageFile=file,
             kernelSize=kernelSize,
             biasValue=biasValue
         ))
         
         
-        service_implementation = sequentialService
-        
-        emboss = Emboss(EmbossProps(
-            serviceEmboss=service_implementation
-        ))
-        
-        
-        
-        processed_image_np = await emboss.aplyFilter()       
+        #service_implementation = sequentialService
+        processed_image_np = await cudaService.aplyFilter()   
         
         
         pil_image_out = Image.fromarray(processed_image_np)
