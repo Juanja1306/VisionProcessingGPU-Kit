@@ -14,6 +14,8 @@ init_cuda()
 from .routers import canny
 from .routers import gaussian
 from .routers import negative
+from .routers import emboss
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -46,7 +48,7 @@ app.add_middleware(
 )
 
 # Mount static files
-static_dir = Path(__file__).parent / "static"
+static_dir = Path(_file_).parent / "static"
 static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
@@ -54,6 +56,8 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 app.include_router(canny.router, tags=["Canny"])
 app.include_router(gaussian.router, tags=["Gaussian"])
 app.include_router(negative.router, tags=["Negative"])
+app.include_router(emboss.router, tags=["Emboss"])
+
 
 @app.get("/", tags=["UI"])
 async def read_index():

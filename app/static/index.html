@@ -344,11 +344,10 @@
         <div class="nav-item" data-filter="gaussian">
             <span>•</span> Gaussian Blur
         </div>
-        <!-- 🔧 AQUÍ ESTABA EL PROBLEMA: antes data-filter="sobel" -->
         <div class="nav-item" data-filter="negative">
             <span>•</span> Negative
         </div>
-        <div class="nav-item" data-filter="laplacian">
+        <div class="nav-item" data-filter="emboss">
             <span>•</span> Emboss
         </div>
     </aside>
@@ -382,7 +381,7 @@
                     </button>
                     <a id="download-link" class="hidden" style="text-decoration: none;">
                         <button class="btn btn-secondary">
-                            <span>⬇️</span> Download Result
+                            <span>⬇</span> Download Result
                         </button>
                     </a>
                 </div>
@@ -697,7 +696,7 @@
 
             if (currentFilter === 'emboss') {
                 const autoModeEl = document.getElementById('emboss-auto-mode');
-                const useAuto = autoModeEl && autoModeEl.checked;
+                useAuto = autoModeEl && autoModeEl.checked;
                 formData.append('use_auto', useAuto ? 'true' : 'false');
             }
 
