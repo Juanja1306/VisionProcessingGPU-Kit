@@ -6,7 +6,7 @@ import pycuda.gpuarray as gpuarray
 
 # Kernel CUDA para Emboss (Soporte RGB)
 kernel_emboss_code = """
-_global_ void emboss_filter(unsigned char *imagen, int *kernel, unsigned char *resultado, 
+__global__ void emboss_filter(unsigned char *imagen, int *kernel, unsigned char *resultado, 
                               int ancho, int altura, int kernel_size, int bias) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
