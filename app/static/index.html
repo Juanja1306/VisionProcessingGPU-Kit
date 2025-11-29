@@ -438,8 +438,8 @@
             canny: {
                 name: "Canny Edge Detection",
                 controls: [
-                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 15, step: 2, value: 5 },
-                    { id: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 10, step: 1, value: 2 },
+                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 99, step: 2, value: 5 },
+                    { id: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 50, step: 1, value: 2 },
                     { id: 'low', label: 'Low Threshold', type: 'range', min: 0, max: 255, step: 1, value: 0, suffix: '(Auto if 0)' },
                     { id: 'high', label: 'High Threshold', type: 'range', min: 0, max: 255, step: 1, value: 0, suffix: '(Auto if 0)' }
                 ]
@@ -447,7 +447,7 @@
             gaussian: {
                 name: "Gaussian Blur",
                 controls: [
-                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 51, step: 2, value: 15 },
+                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 99, step: 2, value: 15 },
                     { id: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 25, step: 1, value: 5 }
                 ]
             },
