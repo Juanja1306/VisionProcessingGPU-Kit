@@ -254,7 +254,6 @@
             flex-direction: column;
             gap: 20px;
             min-height: 0;
-            /* Important for scrolling */
         }
 
         .preview-container {
@@ -354,7 +353,8 @@
         <div class="nav-item" data-filter="gaussian">
             <span>•</span> Gaussian Blur
         </div>
-        <div class="nav-item" data-filter="sobel">
+        <!-- 🔧 AQUÍ ESTABA EL PROBLEMA: antes data-filter="sobel" -->
+        <div class="nav-item" data-filter="negative">
             <span>•</span> Negative
         </div>
         <div class="nav-item" data-filter="laplacian">
@@ -439,7 +439,7 @@
                 name: "Canny Edge Detection",
                 controls: [
                     { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 15, step: 2, value: 5 },
-                    { id: 'sigma', label: 'Sigma', type: 'range', min: 0.1, max: 5.0, step: 0.1, value: 1.4 },
+                    { id: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 10, step: 1, value: 2 },
                     { id: 'low', label: 'Low Threshold', type: 'range', min: 0, max: 255, step: 1, value: 0, suffix: '(Auto if 0)' },
                     { id: 'high', label: 'High Threshold', type: 'range', min: 0, max: 255, step: 1, value: 0, suffix: '(Auto if 0)' }
                 ]
@@ -447,29 +447,34 @@
             gaussian: {
                 name: "Gaussian Blur",
                 controls: [
-                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 15, step: 2, value: 5 },
-                    { id: 'sigma', label: 'Sigma', type: 'range', min: 0.1, max: 10.0, step: 0.1, value: 2.0 }
+                    { id: 'kernel', label: 'Kernel Size', type: 'range', min: 3, max: 51, step: 2, value: 15 },
+                    { id: 'sigma', label: 'Sigma', type: 'range', min: 1, max: 25, step: 1, value: 5 }
                 ]
             },
-            sobel: {
-                name: "Sobel Operator",
-                controls: [
-                    { id: 'ksize', label: 'Kernel Size', type: 'range', min: 1, max: 7, step: 2, value: 3 },
-                    { id: 'scale', label: 'Scale', type: 'range', min: 1, max: 5, step: 1, value: 1 }
-                ]
+            negative: {
+                name: "Negative Filter",
+                controls: []   // sin parámetros por ahora
             },
             laplacian: {
-                name: "Laplacian",
+                name: "Emboss",
                 controls: [
                     { id: 'ksize', label: 'Kernel Size', type: 'range', min: 1, max: 7, step: 2, value: 3 }
                 ]
             }
         };
 
+        // Backend endpoints for each filter
+        const endpoints = {
+            canny: '/api/canny',
+            gaussian: '/api/gaussian',
+            negative: '/api/negative'
+            // laplacian: '/api/emboss'   // futuro
+        };
+
         // State
         let currentFilter = 'canny';
         let currentFile = null;
-        const controlValues = {}; // Store values to persist when switching
+        const controlValues = {};
 
         // DOM Elements
         const controlsContainer = document.getElementById('controls-container');
@@ -485,7 +490,6 @@
         const processBtn = document.getElementById('process-btn');
         const downloadLink = document.getElementById('download-link');
 
-        // Initialize
         function init() {
             renderControls(currentFilter);
             setupEventListeners();
@@ -497,45 +501,78 @@
             controlsContainer.innerHTML = '';
 
             config.controls.forEach(ctrl => {
-                // Use stored value if exists, else default
                 const val = controlValues[ctrl.id] !== undefined ? controlValues[ctrl.id] : ctrl.value;
 
                 const group = document.createElement('div');
                 group.className = 'control-group';
                 group.innerHTML = `
-                    <div class="control-header">
-                        <label>${ctrl.label} ${ctrl.suffix || ''}</label>
-                        <span id="val-${ctrl.id}">${val}</span>
-                    </div>
-                    <input type="${ctrl.type}" id="${ctrl.id}" 
-                           min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${val}">
-                `;
+                <div class="control-header">
+                    <label>${ctrl.label} ${ctrl.suffix || ''}</label>
+                    <span id="val-${ctrl.id}">${val}</span>
+                </div>
+                <input type="${ctrl.type}" id="${ctrl.id}" 
+                       min="${ctrl.min}" max="${ctrl.max}" step="${ctrl.step}" value="${val}">
+            `;
                 controlsContainer.appendChild(group);
 
-                // Event listener for value update
                 const input = group.querySelector('input');
                 input.addEventListener('input', (e) => {
                     document.getElementById(`val-${ctrl.id}`).textContent = e.target.value;
                     controlValues[ctrl.id] = e.target.value;
                 });
             });
+
+            if (config.controls.length === 0) {
+                const info = document.createElement('div');
+                info.className = 'control-group';
+                info.innerHTML = `
+                <span style="font-size:0.85rem; color:var(--text-secondary);">
+                    This filter has no parameters. Just upload an image and click "Process Image".
+                </span>
+            `;
+                controlsContainer.appendChild(info);
+            }
+
+            if (filterKey === 'gaussian') {
+                const extra = document.createElement('div');
+                extra.className = 'control-group';
+                extra.innerHTML = `
+                <div class="control-header">
+                    <label>Gaussian Mode</label>
+                </div>
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--text-secondary);">
+                    <input type="checkbox" id="gauss-auto-mask" />
+                    Use recommended Gaussian mask (auto)
+                </label>
+                <span style="font-size:0.75rem; color:var(--text-secondary);">
+                    If enabled, kernel size and sigma are chosen automatically based on the image size.
+                </span>
+            `;
+                controlsContainer.appendChild(extra);
+
+                const autoCheckbox = extra.querySelector('#gauss-auto-mask');
+                const sliderInputs = controlsContainer.querySelectorAll('input[type="range"]');
+                autoCheckbox.addEventListener('change', (e) => {
+                    const disabled = e.target.checked;
+                    sliderInputs.forEach(inp => {
+                        inp.disabled = disabled;
+                        inp.style.opacity = disabled ? 0.5 : 1;
+                    });
+                });
+            }
         }
 
         function setupEventListeners() {
-            // Navigation
             navItems.forEach(item => {
                 item.addEventListener('click', () => {
-                    // Update UI
                     navItems.forEach(n => n.classList.remove('active'));
                     item.classList.add('active');
 
-                    // Update State
                     currentFilter = item.dataset.filter;
                     renderControls(currentFilter);
                 });
             });
 
-            // File Upload
             dropArea.addEventListener('click', () => fileInput.click());
 
             dropArea.addEventListener('dragover', (e) => {
@@ -555,7 +592,6 @@
                 if (e.target.files.length) handleFile(e.target.files[0]);
             });
 
-            // Process Button
             processBtn.addEventListener('click', processImage);
         }
 
@@ -572,7 +608,6 @@
                 originalImg.classList.remove('hidden');
                 emptyOriginal.classList.add('hidden');
 
-                // Reset processed
                 processedImg.classList.add('hidden');
                 emptyProcessed.classList.remove('hidden');
                 downloadLink.classList.add('hidden');
@@ -586,8 +621,9 @@
                 return;
             }
 
-            if (currentFilter !== 'canny') {
-                alert(`The ${filterConfig[currentFilter].name} backend is not implemented yet.\n\nOnly Canny Edge Detection is fully functional.`);
+            const endpoint = endpoints[currentFilter];
+            if (!endpoint) {
+                alert(`The ${filterConfig[currentFilter].name} backend is not implemented yet.\n\nCurrently, Canny Edge Detection, Gaussian Blur and Negative are implemented.`);
                 return;
             }
 
@@ -596,23 +632,26 @@
             const formData = new FormData();
             formData.append('file', currentFile);
 
-            // Get current values from inputs
-            const inputs = controlsContainer.querySelectorAll('input');
+            const inputs = controlsContainer.querySelectorAll('input[type="range"]');
             inputs.forEach(input => {
-                // Map input IDs to API parameters
                 let paramName = input.id;
                 if (paramName === 'kernel') paramName = 'kernel_size';
                 if (paramName === 'low') paramName = 'low_threshold';
                 if (paramName === 'high') paramName = 'high_threshold';
 
-                // Only append if value > 0 for thresholds (to trigger auto logic)
                 if ((paramName.includes('threshold') && input.value > 0) || !paramName.includes('threshold')) {
                     formData.append(paramName, input.value);
                 }
             });
 
+            if (currentFilter === 'gaussian') {
+                const autoMaskEl = document.getElementById('gauss-auto-mask');
+                const useAuto = autoMaskEl && autoMaskEl.checked;
+                formData.append('use_auto', useAuto ? 'true' : 'false');
+            }
+
             try {
-                const response = await fetch('/api/canny', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     body: formData
                 });
@@ -630,7 +669,7 @@
                 emptyProcessed.classList.add('hidden');
 
                 downloadLink.href = url;
-                downloadLink.download = `canny_result_${Date.now()}.png`;
+                downloadLink.download = `${currentFilter}_result_${Date.now()}.png`;
                 downloadLink.classList.remove('hidden');
 
             } catch (error) {
@@ -641,10 +680,9 @@
             }
         }
 
-        // Start
         init();
-
     </script>
+
 </body>
 
 </html>

@@ -12,7 +12,8 @@ from .core.cuda_config import init_cuda
 init_cuda()
 
 from .routers import canny
-
+from .routers import gaussian
+from .routers import negative
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,6 +52,8 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
 app.include_router(canny.router, tags=["Canny"])
+app.include_router(gaussian.router, tags=["Gaussian"])
+app.include_router(negative.router, tags=["Negative"])
 
 @app.get("/", tags=["UI"])
 async def read_index():
