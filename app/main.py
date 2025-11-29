@@ -3,9 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from contextlib import asynccontextmanager
-
-from .routers import canny
-
+from fastapi.responses import FileResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,8 +41,18 @@ static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 
-app.include_router(canny.router, prefix="/canny", tags=["Canny"])
+#app.include_router(canny.router, tags=["Canny"])
+
+@app.get("/", tags=["UI"])
+async def read_index():
+    return FileResponse(static_dir / "index.html")
+
+@app.get("/emboss", tags=["UI"])
+async def read_emboss():
+    return FileResponse(static_dir / "emboss" / "emboss.html")
+
 
 @app.get("/health", status_code=200, tags=["Health"])
 def health_check():
     return {"service": "GPU-Processing", "status": "healthy"}
+    

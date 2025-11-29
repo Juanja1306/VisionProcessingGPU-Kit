@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPU Vision | Emboss </title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/emboss/css/styles.css">
+</head>
+
+<body>
+    <aside>
+        <div class="brand">GPU Vision Kit</div>
+        <div class="nav-item active" data-filter="canny">
+
+            <p> <span> •</span> Canny Edge </p>
+
+        </div>
+
+        <div class="nav-item" data-filter="gaussian">
+            <p><span>•</span> Gaussian Blur</p>
+
+        </div>
+
+        <div class="nav-item" data-filter="sobel">
+            <p><span>•</span> Negative</p>
+
+        </div>
+
+        <div class="nav-item" data-filter="laplacian">
+            <p><span>•</span> Emboss</p>
+        </div>
+    </aside>
+
+    <main>
+        <div class="bg-blob"></div>
+
+        <div class="content-wrapper">
+            <!-- Left Panel: Controls -->
+            <div class="panel-left">
+
+                <!-- Upload Card -->
+                <div class="glass-card">
+                    <h2>Input Image</h2>
+                    <div id="drop-area" class="upload-area">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">Drag & drop or click to upload</div>
+                        <input type="file" id="file-input" hidden accept="image/*">
+                    </div>
+                </div>
+
+                <!-- Parameters Card -->
+                <div class="glass-card">
+                    <h2 id="filter-title">Filter Settings</h2>
+                    <div id="controls-container">
+                        <!-- Dynamic controls will be injected here -->
+                    </div>
+
+                    <button id="process-btn" class="btn btn-primary">
+                        <span>✨</span> Process Image
+                    </button>
+                    <a id="download-link" class="hidden" style="text-decoration: none;">
+                        <button class="btn btn-secondary">
+                            <span>⬇️</span> Download Result
+                        </button>
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="panel-right">
+                <div class="preview-container">
+
+                    <!-- Original Image -->
+                    <div class="image-card glass-card">
+                        <div class="image-header">Original</div>
+                        <div class="image-wrapper">
+                            <img id="original-image" class="hidden" alt="Original">
+                            <div id="empty-original" class="empty-state">
+                                <span>No image loaded</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Processed Image -->
+                    <div class="image-card glass-card">
+                        <div class="image-header">Processed</div>
+                        <div class="image-wrapper">
+                            <img id="processed-image" class="hidden" alt="Processed">
+                            <div id="empty-processed" class="empty-state">
+                                <span>Process an image to see result</span>
+                            </div>
+                            <div id="loading" class="loading-overlay hidden">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/static/emboss/js/index.js" type="module"></script>
+</body>
+
+</html>
