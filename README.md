@@ -39,6 +39,21 @@ A GPU-accelerated image processing microservice built with **FastAPI**, **PyCUDA
   - **Auto mode**: Automatically selects kernel size based on image resolution
   - Processes all color channels simultaneously
 
+- **Collage Filter**
+  - Combines 6 different filters in diagonal strips.
+  - Includes: Canny, Emboss, Gaussian, Negative, Watermark, and Comic.
+  - **Auto mode**: Automatically adjusts parameters for each sub-filter.
+
+- **Ripple (Comic) Filter**
+  - Creates a comic book style effect.
+  - **Edge detection**: Highlights edges using Sobel operator.
+  - **Posterization**: Reduces color levels for a cartoon look.
+  - **Saturation**: Boosts color vibrancy.
+
+- **Watermark Filter**
+  - Overlays a logo in a repeated grid pattern.
+  - Configurable **scale**, **transparency**, and **spacing**.
+
 ## 🏗️ Architecture
 
 ```
@@ -48,19 +63,28 @@ VisionProcessingGPU-Kit/
 │   │   └── cuda_config.py        # Cross-platform CUDA environment setup
 │   ├── filters/
 │   │   ├── canny.py              # CUDA kernels and Canny implementation
+│   │   ├── collage.py            # Collage filter implementation
+│   │   ├── emboss.py             # Emboss filter CUDA implementation (RGB)
 │   │   ├── gaussian.py           # Gaussian blur CUDA implementation (color)
 │   │   ├── negative.py           # Negative filter CUDA implementation (color)
-│   │   └── emboss.py             # Emboss filter CUDA implementation (RGB)
+│   │   ├── ripple.py             # Ripple/Comic filter CUDA implementation
+│   │   └── watermark.py          # Watermark filter CUDA implementation
 │   ├── routers/
 │   │   ├── canny.py              # FastAPI endpoint for Canny filter
+│   │   ├── collage.py            # FastAPI endpoint for Collage filter
+│   │   ├── emboss.py             # FastAPI endpoint for Emboss filter
 │   │   ├── gaussian.py           # FastAPI endpoint for Gaussian blur
 │   │   ├── negative.py           # FastAPI endpoint for Negative filter
-│   │   └── emboss.py             # FastAPI endpoint for Emboss filter
+│   │   ├── ripple.py             # FastAPI endpoint for Ripple filter
+│   │   └── watermark.py          # FastAPI endpoint for Watermark filter
 │   ├── schemas/
 │   │   ├── canny.py              # Pydantic models for Canny parameters
+│   │   ├── collage.py            # Pydantic models for Collage parameters
+│   │   ├── emboss.py             # Pydantic model for Emboss parameters
 │   │   ├── gaussian.py           # Pydantic models for Gaussian parameters
 │   │   ├── negative.py           # Pydantic model for Negative filter
-│   │   └── emboss.py             # Pydantic model for Emboss parameters
+│   │   ├── ripple.py             # Pydantic models for Ripple parameters
+│   │   └── watermark.py          # Pydantic models for Watermark parameters
 │   ├── static/
 │   │   └── index.html            # Premium web UI (all filters with auto mode)
 │   └── main.py                   # FastAPI application entry point
@@ -230,6 +254,48 @@ Response: PNG image with emboss effect
 - > 4320px (8K+): `kernel_size=9`
 - Bias always set to 128
 
+### Collage Filter
+
+```text
+POST /api/collage
+Content-Type: multipart/form-data
+
+Parameters:
+- file: Image file (required)
+
+Response: PNG image with the collage effect
+```
+
+### Ripple (Comic) Filter
+
+```text
+POST /api/ripple
+Content-Type: multipart/form-data
+
+Parameters:
+- file: Image file (required)
+- edge_threshold: Threshold for edge detection (default: 100.0)
+- color_levels: Number of color levels for posterization (default: 8)
+- saturation: Color saturation factor (default: 1.2)
+
+Response: PNG image with comic effect
+```
+
+### Watermark Filter
+
+```text
+POST /api/watermark
+Content-Type: multipart/form-data
+
+Parameters:
+- file: Image file (required)
+- scale: Logo scale relative to image width (default: 0.3)
+- transparency: Logo opacity (default: 0.3)
+- spacing: Spacing between logos (default: 0.5)
+
+Response: PNG image with watermark pattern
+```
+
 ### Health Check
 
 ```http
@@ -289,6 +355,25 @@ GPU-accelerated embossing with RGB support:
 - Larger images use larger kernels for better embossing effect
 - Maintains visual consistency across different image sizes
 - Bias fixed at optimal value (128) for balanced results
+
+### Collage Filter
+
+- **Compositor Kernel**: A custom CUDA kernel that divides the image into 6 diagonal sections.
+- **Parallel Execution**: Runs all 6 underlying filters (Canny, Emboss, Gaussian, Negative, Watermark, Comic) and composites them on the GPU.
+- **Efficient Memory**: Manages GPU memory to handle multiple intermediate images.
+
+### Ripple (Comic) Filter
+
+- **Single Pass Kernel**: Performs edge detection and color processing in one go.
+- **Sobel Edge Detection**: Calculates gradient magnitude to identify and darken edges.
+- **Color Quantization**: Reduces color palette to create a posterized look.
+- **Saturation Boost**: Enhances colors in the HSV-like color space (simplified).
+
+### Watermark Filter
+
+- **Grid Blending Kernel**: Calculates logo positions based on a grid layout.
+- **Alpha Blending**: Blends the logo with the background image using the alpha channel.
+- **Seamless Tiling**: Handles spacing and repetition efficiently on the GPU.
 
 ## 🌐 Web Interface
 
