@@ -172,6 +172,39 @@ VisionProcessingGPU-Kit/
    http://localhost:8000
    ```
 
+### Subir a Docker Hub
+
+Para subir la imagen a Docker Hub y evitar tener que compilarla cada vez:
+
+1. **Crear cuenta en Docker Hub** 
+   - Visitar https://hub.docker.com y crear una cuenta
+
+2. **Iniciar sesión desde la terminal**
+
+   ```bash
+   docker login
+   ```
+   - Ingresar el username y password de Docker Hub
+
+3. **Taggear la imagen con tu username de Docker Hub**
+
+   ```bash
+   docker tag gpu-vision-kit juanja/gpu-vision-kit:latest
+   ```
+
+4. **Subir la imagen a Docker Hub**
+
+   ```bash
+   docker push juanja/gpu-vision-kit:latest
+   ```
+
+5. **Usar la imagen desde Docker Hub (sin compilar)**
+
+   ```bash
+   docker pull juanja/gpu-vision-kit:latest
+   docker run --gpus all -p 8000:8000 juanja/gpu-vision-kit:latest
+   ```
+
 ## 📡 API Endpoints
 
 ### Canny Edge Detection
