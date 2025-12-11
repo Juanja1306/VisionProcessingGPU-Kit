@@ -121,7 +121,7 @@ def aplicar_collage_cuda(image: np.ndarray) -> np.ndarray:
     img_watermark = aplicar_watermark_cuda(image, str(logo_path), scale=0.3, transparency=0.3, spacing=0.5)
 
     # 6. Comic (Ripple)
-    img_comic = aplicar_ripple_cuda(image, edge_threshold=100.0, color_levels=8, saturation=1.2)
+    img_comic = aplicar_ripple_cuda(image, edge_threshold=100.0, color_levels=4, saturation=1.2)
 
     # --- 2. Preparar GPU ---
     
