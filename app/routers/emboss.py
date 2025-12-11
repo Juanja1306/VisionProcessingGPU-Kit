@@ -40,20 +40,19 @@ async def apply_emboss(
             # Calcular kernel_size según resolución
             if corto <= 1080:
                 # HD o menor
-                kernel_size = 3
+                kernel_size = 31
             elif corto <= 2160:
                 # ~FullHD / 2K
-                kernel_size = 5
+                kernel_size = 51
             elif corto <= 4320:
                 # ~4K
-                kernel_size = 7
+                kernel_size = 71
             else:
                 # Imágenes enormes (8K+)
-                kernel_size = 9
+                kernel_size = 91
             
             # Bias estándar
-            bias_value = 128
-        
+            bias_value = 100
         # Apply Emboss
         processed_image = aplicar_emboss_cuda(
             image_rgb,

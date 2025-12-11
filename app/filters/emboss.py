@@ -16,24 +16,19 @@ __global__ void emboss_filter(unsigned char *imagen, int *kernel, unsigned char 
     int kHalf = kernel_size / 2;
     int channels = 3; // Asumimos RGB
     
-    // Verificar límites (evitar bordes)
-    if (x < kHalf || x >= ancho - kHalf || y < kHalf || y >= altura - kHalf) {
-        // Copiar pixel original en bordes
-        int idx = (y * ancho + x) * channels;
-        resultado[idx] = imagen[idx];
-        resultado[idx + 1] = imagen[idx + 1];
-        resultado[idx + 2] = imagen[idx + 2];
-        return;
-    }
-    
     // Procesar cada canal
     for (int c = 0; c < channels; c++) {
         int sum = 0;
         
         for (int ky = -kHalf; ky <= kHalf; ky++) {
             for (int kx = -kHalf; kx <= kHalf; kx++) {
+                // Clamp coordenadas a los bordes para evitar zonas sin procesar
                 int py = y + ky;
                 int px = x + kx;
+                if (py < 0) py = 0;
+                if (py >= altura) py = altura - 1;
+                if (px < 0) px = 0;
+                if (px >= ancho) px = ancho - 1;
                 
                 int pixel_idx = (py * ancho + px) * channels + c;
                 int kernel_idx = (ky + kHalf) * kernel_size + (kx + kHalf);
